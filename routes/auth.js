@@ -5,29 +5,27 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = 'kljkljasdfkljsfjoi5445312^&*^(*^*(^&(*&*(%$K';
-
-const pool = mysql.createPool(
-    {
-        host: 'localhost',
-        user: 'root',
-        password: '',
-        database: 'my_express_db',
-        waitForConnections: true,
-        connectionLimit: 10,
-        queueLimit : 0
-    }
-);
+const db = require('../models');
 
 router.post('/login', async(req, res) => {
     const {username, password} = req.body;
-    let connection;
+    
+    const User = db.User;
     try {
-        connection = await pool.getConnection();
-        const [rows] = await connection.execute ('select id, username, password from users where username = ?', [username]);
-        if (rows.length === 0) {
-            return res.status(401).json({message : 'Invalid username or password.'});
+        const user = await User.findOne(
+            {
+                where : {
+                    username:username
+                }
+            }
+        );
+        if (!user) {
+            return res.status(401).json(
+                {
+                    message: 'Invalid username or password.'
+                }
+            );
         }
-        const user = rows[0];
         const hashedPassword = user.password;
         console.log(password, hashedPassword);
         const isMatch = await bcrypt.compare(password, hashedPassword);
@@ -50,11 +48,7 @@ router.post('/login', async(req, res) => {
         // Send a 500 Internal Server Error response to the client
         return res.status(500).json({ message: 'Internal server error.' });
     } finally {
-        // This block ensures the connection is always released, whether successful or error
-        if (connection) {
-            connection.release();
-            console.log('Database connection released.'); // Optional: for debugging connection releases
-        }
+        
     }
 });
 
@@ -70,9 +64,12 @@ router.post('/register', async(req, res) => {
         const saltRounds = 10; // Cost factor for bcrypt. Adjust as needed.
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-        // 2. Insert the new user into the database
-        // Assuming your 'users' table has 'username' and 'password' columns.
-        // You might also have 'email', 'created_at', etc.
+        const newUser = await User.create(
+            {
+                username:username,
+                password:hashedPassword
+            }
+        );
         const [result] = await connection.execute(
             'INSERT INTO users (username, password) VALUES (?, ?)',
             [username, hashedPassword]
@@ -87,12 +84,15 @@ router.post('/register', async(req, res) => {
         }
 
     } catch(error) {
- 
-    } finally {
-        // This block ensures the connection is always released, whether successful or error
-        if (connection) {
-            connection.release();
-            console.log('Database connection released.'); // Optional: for debugging connection releases
+ // Check if the error is due to a unique constraint violation (e.g., duplicate username)
+        if (error.name === 'SequelizeUniqueConstraintError') {
+            console.error('Registration error: Duplicate username:', error.errors[0].message);
+            return res.status(409).json({ message: 'Username already exists. Please choose a different one.' });
+        } else {
+            // Log the actual error to your server console for debugging
+            console.error('Registration route error:', error);
+            // Send a generic 500 Internal Server Error response to the client
+            return res.status(500).json({ message: 'Internal server error during registration.' });
         }
     }
 });
