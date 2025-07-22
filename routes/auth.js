@@ -54,13 +54,13 @@ router.post('/login', async(req, res) => {
 
 router.post('/register', async(req, res) => {
     const {username,password} = req.body;
-    let connection;
+    
     if (!username || !password) {
         res.status(400).json({message : 'Username and password are required!'});
     }
+    const User = db.User;
     try {
-        connection = await pool.getConnection();
-        // 1. Hash the plaintext password
+       
         const saltRounds = 10; // Cost factor for bcrypt. Adjust as needed.
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 
@@ -70,18 +70,11 @@ router.post('/register', async(req, res) => {
                 password:hashedPassword
             }
         );
-        const [result] = await connection.execute(
-            'INSERT INTO users (username, password) VALUES (?, ?)',
-            [username, hashedPassword]
-        );
+      
 
-        // Check if the insertion was successful
-        if (result.affectedRows === 1) {
-            return res.status(201).json({ message: 'User registered successfully!', userId: result.insertId, username: username });
-        } else {
-            // This case is unlikely if no error was thrown, but good for robustness
-            return res.status(500).json({ message: 'Failed to register user.' });
-        }
+        
+        return res.status(201).json({ message: 'User registered successfully!', userId: newUser.id, username: username });
+        
 
     } catch(error) {
  // Check if the error is due to a unique constraint violation (e.g., duplicate username)
