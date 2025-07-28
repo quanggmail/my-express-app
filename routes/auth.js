@@ -1,10 +1,12 @@
+require('dotenv').config();
+
 const express = require('express');
 const router = express.Router();
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = 'kljkljasdfkljsfjoi5445312^&*^(*^*(^&(*&*(%$K';
+const JWT_SECRET = process.env.JWT_SECRET;;
 const db = require('../models');
 
 router.post('/login', async(req, res) => {
