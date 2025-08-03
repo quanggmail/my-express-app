@@ -4,6 +4,7 @@ const port = 4000;
 
 const authRoutes = require('./routes/auth');
 const productRoutes = require('./routes/product');
+const postRoutes = require('./routes/postRoutes');
 
 // Middleware to parse JSON bodies
 app.use(express.json());
@@ -18,6 +19,7 @@ app.get('/', (req, res) => {
 
 app.use('/api/auth' , authRoutes);
 app.use('/api/products' , productRoutes);
+app.use('/api/posts' , postRoutes);
 
 // Catch-all for undefined routes (404 Not Found)
 app.use((req, res, next) => {
